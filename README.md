@@ -1,118 +1,17 @@
 <div align="center">
     <img width="160" height="160" src="assets/images/logo/logo.png">
-    <h1>PiliPlus &mdash; Multi-source fork</h1>
+    <h1>PiliPlus —— 多源 fork</h1>
     <p>
-        <a href="#english">English</a> · <a href="#%E4%B8%AD%E6%96%87">中文</a>
-    </p>
-    <p>
-        <a href="https://github.com/bggRGjQaUbCoE/PiliPlus">upstream</a> ·
+        <a href="https://github.com/bggRGjQaUbCoE/PiliPlus">上游</a> ·
         <a href="docs/">docs/</a> ·
-        <a href="AGENTS.md">AGENTS.md</a>
+        <a href="AGENTS.md">AGENTS.md</a> ·
+        <a href="https://github.com/Zichao-xu/PiliPlus/releases">Releases</a>
     </p>
 </div>
 
-> **This is a personal fork of [bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus)** that adds **YouTube as a second video source** alongside Bilibili. Primary target is iOS via TrollStore (no codesign). The credit for the original Bilibili client, the UI, and 99% of the code goes to the upstream author and contributors.
->
-> 本仓库是 [bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus) 的**个人 fork**,在原 Bilibili 客户端基础上**接入 YouTube 作为第二视频源**。主目标是 iOS via TrollStore(免签名侧载)。原项目的功劳归上游作者和贡献者。
+> 本仓库是 [bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus) 的**个人 fork**,在原 Bilibili 客户端基础上**接入 YouTube 作为第二视频源**。主目标平台:iOS via TrollStore(免签名侧载)。原项目的功劳归上游作者和贡献者,本 fork 只是在上面加了 YT 层。
 
 ---
-
-<a id="english"></a>
-
-## What this fork adds on top of upstream
-
-The upstream PiliPlus is a complete Bilibili client. This fork keeps everything upstream does, and **layers a YouTube source on top of the same search / detail / comment / player surface**. Below is a complete diff of behavior — anything not listed here is upstream behavior.
-
-### New: YouTube as a second video source
-
-- **Mixed search**: type a query once, get Bilibili and YouTube results in a single result list (red badge marks YouTube items)
-- **YouTube video detail page** (`lib/pages/yt_video/`): independent page that does not reuse the Bilibili `VideoDetailController` / `PlPlayer`. Uses `media_kit` (mpv) directly
-- **YouTube comments**: top-level comments fetched via Innertube `/next` endpoint (bypasses `youtube_explode_dart`'s broken comment client). Supports continuation pagination
-- **YouTube reply (write)**: short-tap "Reply" button on each comment → dialog → POST `/youtubei/v1/comment/create_comment_reply`. Reply token is mined from `commentEntityPayload` by deep-walking the response for `createCommentReplyEndpoint.params`
-- **Like / dislike / remove rating** (`yt_like_service.dart`): writes via SAPISIDHASH auth (currently returns 401 on some networks — need browser-captured headers to align, work in progress)
-
-### YouTube authentication
-
-- **WebView Google sign-in** (`lib/pages/yt_login/`) — wraps Google's OAuth flow, harvests `SAPISID` / `SID` / `LOGIN_INFO` / `__Secure-*PSID*` cookies on success
-- **SAPISIDHASH signer** (`lib/utils/yt_auth.dart`) — `SHA1("${ts}_${SAPISID}_${origin}")` per Google's internal convention. Used as `Authorization: SAPISIDHASH <ts>_<hash>` for Innertube private endpoints
-- **Account export / import** — both Bilibili and YouTube cookies can be exported to a single JSON and re-imported on another device
-
-### YouTube stream pipeline
-
-The stream layer is the messy part — YouTube's anti-bot is what it is.
-
-- **Three-stage hot-backup chain** in `fetchMuxedStreams`:
-  1. Innertube + `ANDROID_VR` client (no-login default path)
-  2. Innertube + `MWEB` (logged-in fallback)
-  3. `youtube_explode_dart` (`androidVr/safari/mweb/android/androidSdkless/ios/tv`) — last resort, returns 360p muxed only
-- **PoToken** (`yt_potoken_service.dart`) — local WebView with `BotGuard` to mint a PoToken, unlocking 1080p+ from Innertube
-- **HLS master URL preferred** when client returns it — mpv handles ABR / audio-video sync internally, the most reliable high-quality path
-- **Split streams** (video-only + audio-only) configured when only DASH is available: collected as `YtMuxedStreamOption.audioUrl`. mpv's `audio-add ... select` is dispatched after `player.stream.duration` is ready (otherwise the command is silent-dropped before demuxer is up — the root cause of "high-quality streams have no sound" on early builds)
-- **mpv tuning for split streams**: 32 MB buffer, `cache-secs=60`, `demuxer-readahead-secs=30`, `cache-pause-wait=0.5`, `audio-pts-correction-threshold=0.05`, `framedrop=vo`. Starts 1-3 s slower than upstream but stays in sync with two HTTP streams
-- **Cookie + UA injection into mpv** via `setMediaHeader`, so the googlevideo CDN doesn't 403 on logged-in / split URLs
-
-### YouTube subtitles
-
-- All native captions listed (Chinese pinned first, then non-auto-generated, then alphabetical)
-- **Auto-translation to 25 common target languages** via YouTube's own `timedtext?tlang=` server-side translation — no extra API call
-
-### YouTube metadata translation
-
-- **MyMemory** (`yt_translate_service.dart`) — anonymous, no API key, 1000 chars/day/IP
-- Heuristic source-language detection: ASCII → en, hiragana/katakana → ja, Hangul → ko, CJK → zh-CN
-- Long-text chunker: splits text >400 chars on sentence terminators / newlines before sending (avoids MyMemory's 414 URI Too Long)
-- Translatable: title, description, tags, every comment
-
-### Settings panel
-
-New `YouTube` section in settings: default video quality (auto/HLS / 1080p / 720p / 360p), default subtitle mode (off / native / translate), translate target language, auto-translate metadata toggle.
-
-### Other
-
-- `lib/common/source/mixed_search_item.dart` — search result polymorphism (Bilibili + YouTube items in one feed)
-- `assets/config/default_settings.json` — opinionated defaults baked in (dark theme, AVC1 decoder preference, expanded buffer, sponsor-block, etc.)
-- TrollStore-friendly build flags in `ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme`
-
-### Removed / changed from upstream
-
-- Nothing visibly removed — the YouTube source is purely additive; if you don't sign into YouTube, the app behaves like upstream.
-
-### Building
-
-```bash
-flutter pub get
-flutter build ios --release --no-codesign   # IPA → TrollStore
-flutter build macos --release               # native test target
-```
-
-`.fvmrc` pins the Flutter version. Recent dev was on Flutter 3.41.9 / Dart 3.11.5.
-
-### Known limitations
-
-- **YouTube anti-bot is moving target**. Streams / comments / reply token paths can break any time YouTube rotates their `Innertube` response schema. Hot-backup chain absorbs most cases; if everything breaks, ship a session log.
-- **`like` API returns 401** on some networks. Pending browser-captured headers to align.
-- **Audio-video sync on split streams** depends on network quality. 1080p HLS (if the client returns `hlsManifestUrl`) is rock-solid; DASH split is buffering-dependent.
-- Bilibili side is **untouched** — upstream is the source of truth.
-
-### Documentation
-
-Per-decision context lives in:
-
-- [`AGENTS.md`](AGENTS.md) — collaboration conventions for AI agents working on this repo
-- [`docs/specs/`](docs/specs/) — implementation specs (one per feature / fix before code)
-- [`docs/sessions/`](docs/sessions/) — chronological session logs (one per significant change)
-
-### License
-
-Same as upstream. See upstream's [LICENSE](LICENSE).
-
-### Credits
-
-Original PiliPlus by [@bggRGjQaUbCoE](https://github.com/bggRGjQaUbCoE) and upstream contributors. YouTube source layer in this fork: [@Zichao-xu](https://github.com/Zichao-xu) (this repo).
-
----
-
-<a id="中文"></a>
 
 ## 这个 fork 相比上游加了什么
 
@@ -172,7 +71,7 @@ Original PiliPlus by [@bggRGjQaUbCoE](https://github.com/bggRGjQaUbCoE) and upst
 
 - 没有可见删除 —— YouTube 源**纯叠加**,不登录 YT 时 app 行为完全等于上游。
 
-### 构建
+## 构建
 
 ```bash
 flutter pub get
@@ -182,14 +81,14 @@ flutter build macos --release               # 原生测试目标
 
 `.fvmrc` 锁 Flutter 版本。近期开发用的是 Flutter 3.41.9 / Dart 3.11.5。
 
-### 已知限制
+## 已知限制
 
 - **YouTube 反爬月更月变**。流 / 评论 / 回复 token 路径在 YT 改 Innertube 响应结构时随时可能挂。三段热备链能吸收大部分情况;真全挂请提 issue 带 session log
 - **`like` API 部分网络 401**。等浏览器抓包对齐 header
 - **Split 双流音画同步**靠网络。1080p HLS(客户端返回 `hlsManifestUrl` 时)非常稳;DASH split 看缓冲
 - **B 站侧完全不动** —— 上游是 source of truth
 
-### 文档
+## 文档
 
 每个决策的上下文留在仓库里:
 
@@ -197,10 +96,10 @@ flutter build macos --release               # 原生测试目标
 - [`docs/specs/`](docs/specs/) —— 实施 spec(代码改之前先写)
 - [`docs/sessions/`](docs/sessions/) —— 时序的会话日志(每次重要改动一份)
 
-### 许可
+## 许可
 
 与上游一致,见仓库 [LICENSE](LICENSE)。
 
-### 致谢
+## 致谢
 
 原 PiliPlus 由 [@bggRGjQaUbCoE](https://github.com/bggRGjQaUbCoE) 及上游贡献者开发。本 fork 的 YouTube 源层:[@Zichao-xu](https://github.com/Zichao-xu)。
