@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
+
 import 'package:PiliPlus/models/model_owner.dart';
 import 'package:PiliPlus/models/user/danmaku_rule_adapter.dart';
 import 'package:PiliPlus/models/user/info.dart';
@@ -75,6 +77,21 @@ abstract final class GStorage {
     } else {
       reply = null;
     }
+
+    await _applyDefaultsIfFirstLaunch();
+  }
+
+  static Future<void> _applyDefaultsIfFirstLaunch() async {
+    try {
+      if (setting.isNotEmpty) return;
+      final raw = await rootBundle.loadString(
+        'assets/config/default_settings.json',
+      );
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      await importAllJsonSettings(map);
+    } catch (_) {
+      // silent: 默认值缺失不应阻塞启动
+    }
   }
 
   static String exportAllSettings() {
@@ -90,9 +107,24 @@ abstract final class GStorage {
   static Future<List<void>> importAllJsonSettings(
     Map<String, dynamic> map,
   ) {
+    // null guard: 导入的 JSON 可能不含某个 box(例如把 account JSON 误喂这里),
+    // 这种情况下显式报错,避免静默吞掉用户的导入意图
+    final settingMap = map[setting.name];
+    final videoMap = map[video.name];
+    if (settingMap is! Map && videoMap is! Map) {
+      throw StateError(
+        '设置 JSON 缺少 "setting"/"video" 字段,可能误用了登录信息 JSON',
+      );
+    }
     return Future.wait([
-      setting.clear().then((_) => setting.putAll(map[setting.name])),
-      video.clear().then((_) => video.putAll(map[video.name])),
+      if (settingMap is Map)
+        setting
+            .clear()
+            .then((_) => setting.putAll(Map<dynamic, dynamic>.from(settingMap))),
+      if (videoMap is Map)
+        video
+            .clear()
+            .then((_) => video.putAll(Map<dynamic, dynamic>.from(videoMap))),
     ]);
   }
 

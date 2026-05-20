@@ -22,6 +22,9 @@ import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/update.dart';
 import 'package:PiliPlus/utils/utils.dart';
+import 'package:PiliPlus/utils/yt_auth.dart';
+import 'package:PiliPlus/services/youtube/yt_innertube_player.dart';
+import 'package:PiliPlus/services/youtube/yt_potoken_service.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -240,23 +243,130 @@ Commit Hash: ${BuildConfig.commitHash}''',
             ),
           ),
           ListTile(
+            title: Text(YtAuthService.isLoggedIn
+                ? 'YouTube 已登录${YtAuthService.userName != null ? ' (${YtAuthService.userName})' : ''}'
+                : 'YouTube 登录'),
+            leading: const Icon(Icons.smart_display_outlined),
+            trailing: YtAuthService.isLoggedIn
+                ? IconButton(
+                    icon: const Icon(Icons.logout, size: 20),
+                    tooltip: '退出 YouTube',
+                    onPressed: () async {
+                      await YtAuthService.logout();
+                      if (context.mounted) (context as Element).markNeedsBuild();
+                    },
+                  )
+                : null,
+            onTap: YtAuthService.isLoggedIn
+                ? null
+                : () => Get.toNamed('/ytLogin'),
+          ),
+          ListTile(
+            title: const Text('测试 PoToken + /player (调试)'),
+            leading: const Icon(Icons.science_outlined),
+            subtitle: const Text('mint poToken → /player → 列 1080p / 720p formats',
+                style: TextStyle(fontSize: 11)),
+            onTap: () async {
+              SmartDialog.showLoading(msg: '初始化 PoToken 服务...');
+              String? error;
+              String? summary;
+              try {
+                // 1) ensure poToken can mint
+                await YtPoTokenService.instance.initialize();
+                // 2) call /player end-to-end
+                SmartDialog.showLoading(msg: '调用 /player...');
+                final resp = await YtInnertubePlayer.fetchPlayer('dQw4w9WgXcQ');
+                final buf = StringBuffer();
+                buf.writeln('visitorData=${resp.visitorData.substring(0, 32)}...');
+                buf.writeln('hlsManifestUrl=${resp.hlsManifestUrl != null ? "yes" : "no"}');
+                buf.writeln('durationMs=${resp.durationMs}');
+                buf.writeln('formats(${resp.formats.length}):');
+                for (final f in resp.formats) {
+                  final v = f.hasVideo ? '${f.qualityLabel}/${f.width}x${f.height}@${f.fps ?? "?"}fps' : '-';
+                  final a = f.hasAudio ? '${f.bitrate ~/ 1000}kbps${f.isDubbedAudio ? " (dubbed)" : ""}' : '-';
+                  buf.writeln('  itag=${f.itag} ${f.container} ${f.codec} v=$v a=$a');
+                }
+                summary = buf.toString();
+              } catch (e) {
+                error = '$e';
+              }
+              SmartDialog.dismiss();
+              if (!context.mounted) return;
+              await showDialog<void>(
+                context: context,
+                builder: (dctx) => AlertDialog(
+                  title: Text(error != null ? 'PoToken/Player 失败' : '✓ /player OK'),
+                  content: SizedBox(
+                    width: 600,
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        error ?? summary!,
+                        style: const TextStyle(
+                            fontFamily: 'monospace', fontSize: 11),
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dctx),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          ListTile(
             title: const Text('导入/导出登录信息'),
+            subtitle: const Text('Bilibili + YouTube 一起',
+                style: TextStyle(fontSize: 11)),
             leading: const Icon(Icons.import_export_outlined),
             onTap: () => showImportExportDialog<Map>(
               context,
               title: '登录信息',
               localFileName: () => 'account',
-              onExport: () =>
-                  Utils.jsonEncoder.convert(Accounts.account.toMap()),
+              onExport: () {
+                // 新格式:{ bilibili: {...accounts}, youtube: {...4 yt_auth keys} }
+                final youtube = <String, dynamic>{};
+                for (final k in const [
+                  'yt_auth_cookies',
+                  'yt_auth_user_name',
+                  'yt_auth_avatar_url',
+                  'yt_auth_channel_id',
+                ]) {
+                  final v = GStorage.localCache.get(k);
+                  if (v != null) youtube[k] = v;
+                }
+                return Utils.jsonEncoder.convert({
+                  'bilibili': Accounts.account.toMap(),
+                  if (youtube.isNotEmpty) 'youtube': youtube,
+                });
+              },
               onImport: (json) async {
-                final res = json.map(
-                  (key, value) => MapEntry(key, LoginAccount.fromJson(value)),
-                );
-                await Accounts.account.putAll(res);
-                await Accounts.refresh();
-                MineController.anonymity.value = !Accounts.heartbeat.isLogin;
-                if (Accounts.main.isLogin) {
-                  await LoginUtils.onLoginMain();
+                // 新格式检测:顶层有 'bilibili' / 'youtube' key
+                final isNewFmt = json.containsKey('bilibili') ||
+                    json.containsKey('youtube');
+                final biliMap = isNewFmt
+                    ? (json['bilibili'] as Map?)
+                    : json; // 旧格式整个 json 就是 B 站 mid -> LoginAccount
+                final ytMap = isNewFmt ? (json['youtube'] as Map?) : null;
+
+                if (biliMap != null && biliMap.isNotEmpty) {
+                  final res = biliMap.map(
+                    (key, value) =>
+                        MapEntry(key, LoginAccount.fromJson(value as Map)),
+                  );
+                  await Accounts.account.putAll(res);
+                  await Accounts.refresh();
+                  MineController.anonymity.value = !Accounts.heartbeat.isLogin;
+                  if (Accounts.main.isLogin) {
+                    await LoginUtils.onLoginMain();
+                  }
+                }
+                if (ytMap != null && ytMap.isNotEmpty) {
+                  for (final entry in ytMap.entries) {
+                    await GStorage.localCache.put(entry.key, entry.value);
+                  }
                 }
               },
             ),
@@ -270,7 +380,33 @@ Commit Hash: ${BuildConfig.commitHash}''',
               title: '设置',
               localFileName: () => 'setting_${DeviceUtils.platformName}',
               onExport: GStorage.exportAllSettings,
-              onImport: GStorage.importAllJsonSettings,
+              onImport: (json) async {
+                // 智能识别:若 JSON 顶层 key 全是 mid(纯数字 String)且 value 含 cookies/accessKey,
+                // 这是登录信息备份,自动走登录信息导入路径(避免用户误用按钮被卡)
+                final looksLikeAccount = json.isNotEmpty &&
+                    json.entries.every(
+                      (e) =>
+                          int.tryParse(e.key) != null &&
+                          e.value is Map &&
+                          ((e.value as Map).containsKey('cookies') ||
+                              (e.value as Map).containsKey('accessKey')),
+                    );
+                if (looksLikeAccount) {
+                  final res = (json as Map).map(
+                    (key, value) =>
+                        MapEntry(key, LoginAccount.fromJson(value as Map)),
+                  );
+                  await Accounts.account.putAll(res);
+                  await Accounts.refresh();
+                  MineController.anonymity.value = !Accounts.heartbeat.isLogin;
+                  if (Accounts.main.isLogin) {
+                    await LoginUtils.onLoginMain();
+                  }
+                  SmartDialog.showToast('识别为登录信息备份,已按登录信息导入');
+                  return;
+                }
+                await GStorage.importAllJsonSettings(json);
+              },
             ),
           ),
           ListTile(

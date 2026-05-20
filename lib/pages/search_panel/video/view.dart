@@ -1,10 +1,18 @@
+import 'package:PiliPlus/build_config.dart';
+import 'package:PiliPlus/common/source/mixed_search_item.dart';
+import 'package:PiliPlus/common/source/source_badge.dart';
+import 'package:PiliPlus/common/source/video_source.dart';
 import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:PiliPlus/common/widgets/video_card/video_card_h.dart';
+import 'package:PiliPlus/common/widgets/video_card/yt_video_card_h.dart';
 import 'package:PiliPlus/models/common/search/video_search_type.dart';
+import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/search/result.dart';
+import 'package:PiliPlus/models_new/youtube/yt_video_item.dart';
 import 'package:PiliPlus/pages/search/widgets/search_text.dart';
 import 'package:PiliPlus/pages/search_panel/video/controller.dart';
 import 'package:PiliPlus/pages/search_panel/view.dart';
+import 'package:PiliPlus/services/youtube/yt_search_supplement.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -31,6 +39,8 @@ class _SearchVideoPanelState
     with GridMixin {
   @override
   late final SearchVideoController controller;
+  Worker? _sortWorker;
+  LoadingState? _prevState;
 
   @override
   void initState() {
@@ -43,6 +53,34 @@ class _SearchVideoPanelState
       ),
       tag: widget.searchType.name + widget.tag,
     );
+
+    if (BuildConfig.kEnableYoutube) {
+      Get.put(
+        YtSearchSupplementController(keyword: widget.keyword),
+        tag: 'yt_${widget.searchType.name}_${widget.tag}',
+      );
+      // 排序联动: B 站 controller 从 Success → Loading 表示重 query(排序/筛选)
+      // 这时让 YT 也 reload 首屏一次,避免"切排序结果不动"
+      _sortWorker = ever<LoadingState>(controller.loadingState, (s) {
+        if (s is Loading && _prevState is Success) {
+          Get.find<YtSearchSupplementController>(
+            tag: 'yt_${widget.searchType.name}_${widget.tag}',
+          ).reload();
+        }
+        _prevState = s;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _sortWorker?.dispose();
+    if (BuildConfig.kEnableYoutube) {
+      Get.delete<YtSearchSupplementController>(
+        tag: 'yt_${widget.searchType.name}_${widget.tag}',
+      );
+    }
+    super.dispose();
   }
 
   @override
@@ -103,21 +141,76 @@ class _SearchVideoPanelState
 
   @override
   Widget buildList(ThemeData theme, List<SearchVideoItemModel> list) {
-    return SliverGrid.builder(
-      gridDelegate: gridDelegate,
-      itemBuilder: (context, index) {
-        if (index == list.length - 1) {
-          controller.onLoadMore();
-        }
-        return VideoCardH(
-          videoItem: list[index],
-          onRemove: () => controller.loadingState
-            ..value.data!.removeAt(index)
-            ..refresh(),
-        );
-      },
-      itemCount: list.length,
+    if (!BuildConfig.kEnableYoutube) {
+      return SliverGrid.builder(
+        gridDelegate: gridDelegate,
+        itemBuilder: (context, index) {
+          if (index == list.length - 1) {
+            controller.onLoadMore();
+          }
+          return VideoCardH(
+            videoItem: list[index],
+            onRemove: () => controller.loadingState
+              ..value.data!.removeAt(index)
+              ..refresh(),
+          );
+        },
+        itemCount: list.length,
+      );
+    }
+
+    final ytController = Get.find<YtSearchSupplementController>(
+      tag: 'yt_${widget.searchType.name}_${widget.tag}',
     );
+
+    return Obx(() {
+      final ytState = ytController.state.value;
+      final ytList =
+          ytState is Success<List<YtVideoItem>>
+              ? ytState.response
+              : <YtVideoItem>[];
+      final mixed = mergeMixed(list, ytList);
+      return SliverGrid.builder(
+        gridDelegate: gridDelegate,
+        itemBuilder: (context, index) {
+          if (index == mixed.length - 1) {
+            controller.onLoadMore();
+            ytController.onLoadMore();
+          }
+          final entry = mixed[index];
+          return switch (entry) {
+            BiliSearchItem(:final item) => Stack(
+              children: [
+                VideoCardH(
+                  videoItem: item,
+                  // 搜索混排:删菜单按钮,统一在卡片右下显示来源 logo
+                  showMenu: false,
+                  onRemove: () => controller.loadingState
+                    ..value.data!.removeAt(list.indexOf(item))
+                    ..refresh(),
+                ),
+                const Positioned(
+                  bottom: 6,
+                  right: 12,
+                  child: SourceBadge(source: VideoSource.bilibili),
+                ),
+              ],
+            ),
+            YtSearchItem(:final item) => Stack(
+              children: [
+                YtVideoCardH(videoItem: item),
+                const Positioned(
+                  bottom: 6,
+                  right: 12,
+                  child: SourceBadge(source: VideoSource.youtube),
+                ),
+              ],
+            ),
+          };
+        },
+        itemCount: mixed.length,
+      );
+    });
   }
 
   @override

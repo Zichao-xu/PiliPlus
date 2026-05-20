@@ -34,6 +34,7 @@ import 'package:PiliPlus/models_new/video/video_detail/page.dart';
 import 'package:PiliPlus/models_new/video/video_pbp/data.dart';
 import 'package:PiliPlus/models_new/video/video_play_info/subtitle.dart';
 import 'package:PiliPlus/models_new/video/video_stein_edgeinfo/data.dart';
+import 'package:PiliPlus/models_new/youtube/yt_video_detail.dart';
 import 'package:PiliPlus/pages/audio/view.dart';
 import 'package:PiliPlus/pages/common/publish/publish_route.dart';
 import 'package:PiliPlus/pages/search/widgets/search_text.dart';
@@ -41,6 +42,7 @@ import 'package:PiliPlus/pages/sponsor_block/block_mixin.dart';
 import 'package:PiliPlus/pages/video/download_panel/view.dart';
 import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
 import 'package:PiliPlus/pages/video/introduction/ugc/controller.dart';
+import 'package:PiliPlus/services/youtube/yt_video.dart';
 import 'package:PiliPlus/pages/video/medialist/view.dart';
 import 'package:PiliPlus/pages/video/note/view.dart';
 import 'package:PiliPlus/pages/video/post_panel/view.dart';
@@ -100,6 +102,10 @@ class VideoDetailController extends GetxController
   late SourceType sourceType;
   late BiliDownloadEntryInfo entry;
   late bool isFileSource;
+  late bool isYtSource;
+  String? ytVideoId;
+  YtVideoDetail? ytVideoDetail;
+  String? ytMuxedUrl;
   late bool _mediaDesc = false;
   late final RxList<MediaListItemModel> mediaList = <MediaListItemModel>[].obs;
   late String watchLaterTitle;
@@ -149,14 +155,14 @@ class VideoDetailController extends GetxController
   late String cacheDecode = Pref.defaultDecode; // def avc
   late String cacheSecondDecode = Pref.secondDecode; // def av1
 
-  bool get showReply => isFileSource
+  bool get showReply => (isFileSource || isYtSource)
       ? false
       : isUgc
       ? plPlayerController.showVideoReply
       : plPlayerController.showBangumiReply;
 
   bool get showRelatedVideo =>
-      isFileSource ? false : plPlayerController.showRelatedVideo;
+      (isFileSource || isYtSource) ? false : plPlayerController.showRelatedVideo;
 
   ScrollController? introScrollCtr;
   ScrollController get effectiveIntroScrollCtr =>
@@ -247,7 +253,7 @@ class VideoDetailController extends GetxController
       var width = firstVideo.width;
       var height = firstVideo.height;
       if (width == null || height == null) {
-        if (isUgc && !isFileSource) {
+        if (isUgc && !isFileSource && !isYtSource) {
           final ugcIntroCtr = Get.find<UgcIntroController>(tag: heroTag);
           final cid = this.cid.value;
           final part = ugcIntroCtr.videoDetail.value.pages?.firstWhereOrNull(
@@ -378,6 +384,30 @@ class VideoDetailController extends GetxController
     _setVideoHeight();
   }
 
+  Future<void> initYtSource() async {
+    try {
+      final service = YtVideoService();
+      final detail = await service.fetchDetail(ytVideoId!);
+      ytVideoDetail = detail;
+      final url = await service.fetchMuxedUrl(ytVideoId!);
+      if (url == null) {
+        SmartDialog.showToast('视频不可播放');
+        return;
+      }
+      ytMuxedUrl = url;
+      await plPlayerController.setDataSource(
+        NetworkSource(
+          videoSource: url,
+          audioSource: null,
+        ),
+        autoplay: true,
+        duration: detail.duration,
+      );
+    } catch (e) {
+      SmartDialog.showToast('YouTube 视频加载失败: $e');
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -403,9 +433,13 @@ class VideoDetailController extends GetxController
 
     sourceType = args['sourceType'] ?? SourceType.normal;
     isFileSource = sourceType == SourceType.file;
-    isPlayAll = sourceType != SourceType.normal && !isFileSource;
+    isYtSource = sourceType == SourceType.youtube;
+    isPlayAll = sourceType != SourceType.normal && !isFileSource && !isYtSource;
     if (isFileSource) {
       initFileSource(args['entry']);
+    } else if (isYtSource) {
+      ytVideoId = args['ytVideoId'];
+      initYtSource();
     } else if (isPlayAll) {
       watchLaterTitle = args['favTitle'];
       _mediaDesc = args['desc'];
@@ -730,7 +764,7 @@ class VideoDetailController extends GetxController
   Future<void>? _initPlayerIfNeeded(bool autoFullScreenFlag) {
     if (_autoPlay.value ||
         (plPlayerController.preInitPlayer && !plPlayerController.processing) &&
-            (isFileSource
+            ((isFileSource || isYtSource)
                 ? true
                 : videoPlayerKey.currentState?.mounted == true)) {
       return playerInit(
@@ -792,7 +826,7 @@ class VideoDetailController extends GetxController
 
     if (isClosed) return;
 
-    if (!isFileSource) {
+    if (!isFileSource && !isYtSource) {
       if (plPlayerController.enableBlock) {
         initSkip();
       }
@@ -831,6 +865,9 @@ class VideoDetailController extends GetxController
     bool fromReset = false,
     bool autoFullScreenFlag = false,
   }) async {
+    if (isYtSource) {
+      return;
+    }
     if (isFileSource) {
       return _initPlayerIfNeeded(autoFullScreenFlag);
     }
@@ -1308,7 +1345,7 @@ class VideoDetailController extends GetxController
     vttSubtitlesIndex.value = -1;
     vttSubtitles.clear();
 
-    if (!isFileSource) {
+    if (!isFileSource && !isYtSource) {
       // language
       languages.value = null;
       currLang.value = null;

@@ -13,4 +13,6 @@ abstract final class BuildConfig {
     'pili.hash',
     defaultValue: 'N/A',
   );
+
+  static const bool kEnableYoutube = true; // M1: feature flag,出问题时改 false 一键回退
 }

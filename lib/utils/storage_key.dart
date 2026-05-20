@@ -232,7 +232,27 @@ abstract final class SettingBoxKey {
       tempPlayerConf = 'tempPlayerConf',
       reduceLuxColor = 'reduceLuxColor',
       liveCdnUrl = 'liveCdnUrl',
-      saveReply = 'saveReply';
+      saveReply = 'saveReply',
+      showMineSearch = 'showMineSearch',
+      showMineMsg = 'showMineMsg',
+      showMineReply = 'showMineReply',
+      showMineIncognito = 'showMineIncognito',
+      showMineSwitchAccount = 'showMineSwitchAccount',
+      showMineTheme = 'showMineTheme',
+      showMineSettings = 'showMineSettings',
+      searchFilterEnabled = 'searchFilterEnabled',
+      searchMinDuration = 'searchMinDuration',
+      searchMaxPlayCount = 'searchMaxPlayCount',
+      searchBlockedPartitions = 'searchBlockedPartitions';
+
+  // === YouTube 相关 ===
+  static const String ytDefaultQuality = 'ytDefaultQuality', // 'auto'/'360p'/'720p'/'1080p'
+      ytSubtitleDefault = 'ytSubtitleDefault', // 'off'/'native'/'translate'
+      ytSubtitleTranslateLang = 'ytSubtitleTranslateLang', // 字幕翻译目标 e.g. 'zh-Hans'
+      ytAutoTranslateMeta = 'ytAutoTranslateMeta', // bool 自动翻译标题/简介/评论/tag
+      ytTranslateApiKey = 'ytTranslateApiKey', // DeepL Free API key
+      ytTranslateProvider = 'ytTranslateProvider', // 'deepl_free'/'deepl_pro'
+      ytTranslateTargetLang = 'ytTranslateTargetLang'; // DeepL 风格 e.g. 'ZH'
 }
 
 abstract final class LocalCacheKey {

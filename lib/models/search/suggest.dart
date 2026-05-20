@@ -20,4 +20,9 @@ class SearchSuggestItem {
     term = json['term'];
     textRich = json['name'];
   }
+
+  SearchSuggestItem.yt(String text) {
+    term = text;
+    textRich = text;
+  }
 }

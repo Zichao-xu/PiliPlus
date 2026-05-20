@@ -48,6 +48,7 @@ dependencies:
 
   # 网络
   dio: ^5.9.1
+  youtube_explode_dart: ^3.1.0
   cookie_jar: ^4.0.8
   connectivity_plus: ^7.1.1
   dio_http2_adapter: ^2.5.3
@@ -307,6 +308,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  integration_test:
+    sdk: flutter
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -364,6 +368,9 @@ flutter:
     - path: assets/images/video/
     - path: assets/images/paycoins/
     - path: assets/shaders/
+    - path: assets/yt/
+    - assets/config/default_settings.json
+    - assets/config/default_account.json
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 

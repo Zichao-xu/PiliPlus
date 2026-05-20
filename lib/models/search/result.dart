@@ -70,6 +70,8 @@ class SearchVideoItemModel extends HorizontalVideoModel {
   String? arcurl;
   String? tag;
   int? ctime;
+  int? tid;
+  String? typeName;
 
   @override
   int? get seasonId => aid;
@@ -88,6 +90,9 @@ class SearchVideoItemModel extends HorizontalVideoModel {
     duration = DurationUtils.parseDuration(json['duration']);
     owner = SearchOwner.fromJson(json);
     stat = SearchStat.fromJson(json);
+    final rawTid = json['typeid'];
+    tid = rawTid is int ? rawTid : int.tryParse(rawTid?.toString() ?? '');
+    typeName = json['typename']?.toString();
     switch (json['type']) {
       case 'ketang':
         badge = '课堂';
@@ -111,7 +116,8 @@ class SearchStat extends BaseStat {
   int? reply;
 
   SearchStat.fromJson(Map<String, dynamic> json) {
-    view = json['play'];
+    final raw = json['play'];
+    view = raw is int ? raw : (raw is num ? raw.toInt() : int.tryParse(raw?.toString() ?? ''));
     danmu = json['danmaku'];
     favorite = json['favorite'];
     reply = json['review'];

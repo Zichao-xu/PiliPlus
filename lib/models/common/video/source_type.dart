@@ -27,6 +27,7 @@ enum SourceType {
     playlistSource: PlaylistSource.MEDIA_LIST,
   ),
   file,
+  youtube,
   ;
 
   final int? mediaType;

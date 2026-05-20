@@ -4,6 +4,7 @@ import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/search.dart';
 import 'package:PiliPlus/models/search/suggest.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart' show YoutubeExplode;
 import 'package:PiliPlus/models_new/search/search_rcmd/data.dart';
 import 'package:PiliPlus/models_new/search/search_trending/data.dart';
 import 'package:PiliPlus/utils/extension/get_ext.dart';
@@ -215,11 +216,53 @@ class SSearchController extends GetxController
 
   @override
   Future<void> onValueChanged(String value) async {
-    final res = await SearchHttp.searchSuggest(term: value);
-    if (res case Success(:final response)) {
+    // 并行拉 B 站 + YouTube 候选词
+    final results = await Future.wait<dynamic>([
+      SearchHttp.searchSuggest(term: value),
+      _fetchYtSuggestions(value),
+    ]);
+    final biliRes = results[0];
+    final ytList = results[1] as List<SearchSuggestItem>;
+    final biliList = <SearchSuggestItem>[];
+    if (biliRes case Success(:final response)) {
       if (response.tag?.isNotEmpty == true) {
-        searchSuggestList.value = response.tag!;
+        biliList.addAll(response.tag!);
       }
+    }
+    // 1:1 交错合并,B 站优先
+    final merged = <SearchSuggestItem>[];
+    final seen = <String>{};
+    var bi = 0, yi = 0;
+    while (bi < biliList.length || yi < ytList.length) {
+      if (bi < biliList.length) {
+        final t = biliList[bi].term ?? biliList[bi].textRich;
+        if (seen.add(t)) merged.add(biliList[bi]);
+        bi++;
+      }
+      if (yi < ytList.length) {
+        final t = ytList[yi].term ?? ytList[yi].textRich;
+        if (seen.add(t)) merged.add(ytList[yi]);
+        yi++;
+      }
+    }
+    if (merged.isNotEmpty) searchSuggestList.value = merged;
+  }
+
+  Future<List<SearchSuggestItem>> _fetchYtSuggestions(String value) async {
+    if (value.isEmpty) return const [];
+    try {
+      final yt = YoutubeExplode();
+      try {
+        final suggestions = await yt.search.getQuerySuggestions(value);
+        return suggestions
+            .map(SearchSuggestItem.yt)
+            .toList(growable: false);
+      } finally {
+        yt.close();
+      }
+    } catch (_) {
+      // 降级: 网络/库错误时 YT 候选不阻塞 B 站结果
+      return const [];
     }
   }
 

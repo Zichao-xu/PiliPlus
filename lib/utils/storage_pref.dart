@@ -978,4 +978,40 @@ abstract final class Pref {
 
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);
+
+  static bool get showMineSearch =>
+      _setting.get(SettingBoxKey.showMineSearch, defaultValue: true);
+
+  static bool get showMineMsg =>
+      _setting.get(SettingBoxKey.showMineMsg, defaultValue: true);
+
+  static bool get showMineReply =>
+      _setting.get(SettingBoxKey.showMineReply, defaultValue: true);
+
+  static bool get showMineIncognito =>
+      _setting.get(SettingBoxKey.showMineIncognito, defaultValue: true);
+
+  static bool get showMineSwitchAccount =>
+      _setting.get(SettingBoxKey.showMineSwitchAccount, defaultValue: true);
+
+  static bool get showMineTheme =>
+      _setting.get(SettingBoxKey.showMineTheme, defaultValue: true);
+
+  static bool get showMineSettings =>
+      _setting.get(SettingBoxKey.showMineSettings, defaultValue: true);
+
+  static bool get searchFilterEnabled =>
+      _setting.get(SettingBoxKey.searchFilterEnabled, defaultValue: true);
+
+  static int get searchMinDuration =>
+      _setting.get(SettingBoxKey.searchMinDuration, defaultValue: 600);
+
+  static int get searchMaxPlayCount =>
+      _setting.get(SettingBoxKey.searchMaxPlayCount, defaultValue: 1000000);
+
+  static List<String> get searchBlockedPartitions {
+    final v = _setting.get(SettingBoxKey.searchBlockedPartitions);
+    if (v is List) return v.cast<String>();
+    return const ['鬼畜', '国创', '综艺', '娱乐', '资讯', '热门'];
+  }
 }

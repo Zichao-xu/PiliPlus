@@ -23,11 +23,14 @@ class VideoCardH extends StatelessWidget {
     this.onTap,
     this.onViewLater,
     this.onRemove,
+    this.showMenu = true,
   });
   final HorizontalVideoModel videoItem;
   final VoidCallback? onTap;
   final ValueChanged<int>? onViewLater;
   final VoidCallback? onRemove;
+  // 是否在卡片右下角显示"三个点"菜单 (搜索混排页传 false,腾出位置放 source 图标)
+  final bool showMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -164,17 +167,18 @@ class VideoCardH extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            bottom: 0,
-            right: 12,
-            width: 29,
-            height: 29,
-            child: VideoPopupMenu(
-              iconSize: 17,
-              videoItem: videoItem,
-              onRemove: onRemove,
+          if (showMenu)
+            Positioned(
+              bottom: 0,
+              right: 12,
+              width: 29,
+              height: 29,
+              child: VideoPopupMenu(
+                iconSize: 17,
+                videoItem: videoItem,
+                onRemove: onRemove,
+              ),
             ),
-          ),
         ],
       ),
     );

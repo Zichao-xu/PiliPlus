@@ -736,8 +736,11 @@ class LoginPageController extends GetxController
       ),
     };
     bool quickSelect = selectAccount.every((e) => e == selectAccount.first);
+    // 用 root navigator + overlayContext fallback,避免 await 期间 Get.context stale
+    final effectiveContext = Get.overlayContext ?? context;
     return showDialog(
-      context: context,
+      context: effectiveContext,
+      useRootNavigator: true,
       builder: (context) => AlertDialog(
         title: Row(
           crossAxisAlignment: .start,

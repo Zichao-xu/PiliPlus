@@ -10,6 +10,7 @@ import 'package:PiliPlus/pages/setting/privacy_setting.dart';
 import 'package:PiliPlus/pages/setting/recommend_setting.dart';
 import 'package:PiliPlus/pages/setting/style_setting.dart';
 import 'package:PiliPlus/pages/setting/video_setting.dart';
+import 'package:PiliPlus/pages/setting/yt_setting.dart';
 import 'package:PiliPlus/pages/setting/widgets/multi_select_dialog.dart';
 import 'package:PiliPlus/pages/webdav/view.dart';
 import 'package:PiliPlus/utils/accounts.dart';
@@ -76,6 +77,11 @@ class _SettingPageState extends State<SettingPage> {
       icon: Icon(Icons.extension_outlined),
     ),
     _SettingsModel(
+      type: SettingType.ytSetting,
+      subtitle: '画质、字幕、翻译(DeepL)、API Key',
+      icon: Icon(Icons.smart_display_outlined),
+    ),
+    _SettingsModel(
       type: SettingType.webdavSetting,
       icon: Icon(MdiIcons.databaseCogOutline),
     ),
@@ -127,6 +133,9 @@ class _SettingPageState extends State<SettingPage> {
                         showAppBar: false,
                       ),
                       SettingType.extraSetting => const ExtraSetting(
+                        showAppBar: false,
+                      ),
+                      SettingType.ytSetting => const YtSetting(
                         showAppBar: false,
                       ),
                       SettingType.webdavSetting => const WebDavSettingPage(

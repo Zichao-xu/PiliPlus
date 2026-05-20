@@ -14,6 +14,8 @@ import 'package:PiliPlus/router/app_pages.dart';
 import 'package:PiliPlus/services/account_service.dart';
 import 'package:PiliPlus/services/download/download_service.dart';
 import 'package:PiliPlus/services/service_locator.dart';
+import 'package:PiliPlus/services/youtube/yt_innertube_player.dart';
+import 'package:PiliPlus/services/youtube/yt_potoken_service.dart';
 import 'package:PiliPlus/utils/cache_manager.dart';
 import 'package:PiliPlus/utils/calc_window_position.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
@@ -227,6 +229,35 @@ void main() async {
   } else {
     runApp(const MyApp());
   }
+
+  // 后台预热 YT PoToken WebView(冷启动 BotGuard 跑 ~1-3s,放后台跑掉,
+  // 用户点 YT 视频时直接 hit 缓存,起播省 1.2-3.7s)
+  _warmupYtPoToken();
+}
+
+/// 后台 fire,不阻塞 UI;失败静默(用户不主动用 YT 时不报错)
+void _warmupYtPoToken() {
+  // ignore: avoid_print
+  print('[YT] Warmup scheduled (800ms delay)');
+  Future<void>.delayed(const Duration(milliseconds: 800), () {
+    // ignore: avoid_print
+    print('[YT] Warmup firing now');
+    YtPoTokenService.instance.initialize().then((_) {
+      // ignore: avoid_print
+      print('[YT] PoToken warmup OK');
+    }).catchError((Object e) {
+      // ignore: avoid_print
+      print('[YT] PoToken warmup failed: $e');
+    });
+    YtInnertubePlayer.fetchVisitorData().then((vd) {
+      // ignore: avoid_print
+      print('[YT] visitorData warmup OK len=${vd.length}');
+    }).catchError((Object e) {
+      // ignore: avoid_print
+      print('[YT] visitorData warmup failed: $e');
+      return '';
+    });
+  });
 }
 
 class MyApp extends StatelessWidget {

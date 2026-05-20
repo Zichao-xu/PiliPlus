@@ -272,13 +272,22 @@ class _MainAppState extends PopScopeState<MainApp>
     }
   }
 
+  void _onNavDestinationSelected(int index) {
+    if (index < _mainController.navigationBars.length &&
+        _mainController.navigationBars[index] == NavigationBarType.search) {
+      Get.toNamed('/search');
+      return;
+    }
+    _mainController.setIndex(index);
+  }
+
   Widget? get _bottomNav {
     Widget? bottomNav;
     if (_mainController.navigationBars.length > 1) {
       if (_mainController.floatingNavBar) {
         bottomNav = Obx(
           () => FloatingNavigationBar(
-            onDestinationSelected: _mainController.setIndex,
+            onDestinationSelected: _onNavDestinationSelected,
             selectedIndex: _mainController.selectedIndex.value,
             destinations: _mainController.navigationBars
                 .map(
@@ -295,7 +304,7 @@ class _MainAppState extends PopScopeState<MainApp>
         bottomNav = Obx(
           () => NavigationBar(
             maintainBottomViewPadding: true,
-            onDestinationSelected: _mainController.setIndex,
+            onDestinationSelected: _onNavDestinationSelected,
             selectedIndex: _mainController.selectedIndex.value,
             destinations: _mainController.navigationBars
                 .map(
@@ -312,7 +321,7 @@ class _MainAppState extends PopScopeState<MainApp>
         bottomNav = Obx(
           () => BottomNavigationBar(
             currentIndex: _mainController.selectedIndex.value,
-            onTap: _mainController.setIndex,
+            onTap: _onNavDestinationSelected,
             iconSize: 16,
             selectedFontSize: 12,
             unselectedFontSize: 12,
@@ -380,7 +389,7 @@ class _MainAppState extends PopScopeState<MainApp>
                             indicatorShape: const RoundedRectangleBorder(
                               borderRadius: .all(.circular(16)),
                             ),
-                            onDestinationSelected: _mainController.setIndex,
+                            onDestinationSelected: _onNavDestinationSelected,
                             selectedIndex: _mainController.selectedIndex.value,
                             children: _mainController.navigationBars
                                 .map(
@@ -404,7 +413,7 @@ class _MainAppState extends PopScopeState<MainApp>
                   () => NavigationRail(
                     groupAlignment: 0.5,
                     selectedIndex: _mainController.selectedIndex.value,
-                    onDestinationSelected: _mainController.setIndex,
+                    onDestinationSelected: _onNavDestinationSelected,
                     labelType: .selected,
                     leading: userAndSearchVertical(theme),
                     destinations: _mainController.navigationBars

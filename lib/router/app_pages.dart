@@ -64,6 +64,7 @@ import 'package:PiliPlus/pages/setting/play_setting.dart';
 import 'package:PiliPlus/pages/setting/privacy_setting.dart';
 import 'package:PiliPlus/pages/setting/recommend_setting.dart';
 import 'package:PiliPlus/pages/setting/style_setting.dart';
+import 'package:PiliPlus/pages/setting/yt_setting.dart';
 import 'package:PiliPlus/pages/setting/video_setting.dart';
 import 'package:PiliPlus/pages/setting/view.dart';
 import 'package:PiliPlus/pages/settings_search/view.dart';
@@ -72,6 +73,8 @@ import 'package:PiliPlus/pages/sponsor_block/view.dart';
 import 'package:PiliPlus/pages/subscription/view.dart';
 import 'package:PiliPlus/pages/subscription_detail/view.dart';
 import 'package:PiliPlus/pages/video/view.dart';
+import 'package:PiliPlus/pages/yt_login/yt_login_page.dart';
+import 'package:PiliPlus/pages/yt_video/yt_video_page.dart';
 import 'package:PiliPlus/pages/webdav/view.dart';
 import 'package:PiliPlus/pages/webview/view.dart';
 import 'package:PiliPlus/pages/whisper/view.dart';
@@ -87,6 +90,10 @@ class Routes {
     GetPage(name: '/hot', page: () => const HotPage()),
     // 视频详情
     GetPage(name: '/videoV', page: () => const VideoDetailPageV()),
+    // YouTube 视频详情(M3v2,独立路由)
+    GetPage(name: '/ytVideo', page: () => const YtVideoPage()),
+    // YouTube 登录(WebView google login)
+    GetPage(name: '/ytLogin', page: () => const YtLoginPage()),
     //
     GetPage(name: '/webview', page: () => const WebviewPage()),
     // 设置
@@ -128,6 +135,8 @@ class Routes {
     GetPage(name: '/privacySetting', page: () => const PrivacySetting()),
     // 其它设置
     GetPage(name: '/extraSetting', page: () => const ExtraSetting()),
+    // YouTube 设置
+    GetPage(name: '/ytSetting', page: () => const YtSetting()),
     //
     GetPage(name: '/blackListPage', page: () => const BlackListPage()),
     GetPage(name: '/colorSetting', page: () => const ColorSelectPage()),

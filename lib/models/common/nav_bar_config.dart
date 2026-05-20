@@ -23,7 +23,12 @@ enum NavigationBarType implements EnumWithLabel {
     Icon(Icons.person, size: 24),
     MinePage(),
   ),
-  ;
+  search(
+    '搜索',
+    Icon(Icons.search_outlined, size: 24),
+    Icon(Icons.search, size: 24),
+    SizedBox.shrink(),
+  );
 
   @override
   final String label;

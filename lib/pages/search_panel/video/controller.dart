@@ -7,6 +7,7 @@ import 'package:PiliPlus/models/search/result.dart';
 import 'package:PiliPlus/pages/search/widgets/search_text.dart';
 import 'package:PiliPlus/pages/search_panel/controller.dart';
 import 'package:PiliPlus/utils/app_scheme.dart';
+import 'package:PiliPlus/utils/search_filter.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
@@ -38,7 +39,9 @@ class SearchVideoController
 
   @override
   List<SearchVideoItemModel>? getDataList(SearchVideoData response) {
-    return response.list;
+    final raw = response.list;
+    if (raw == null) return null;
+    return raw.where((v) => !SearchFilter.shouldFilter(v)).toList();
   }
 
   @override

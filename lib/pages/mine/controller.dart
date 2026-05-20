@@ -301,6 +301,9 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
   @override
   void onChangeAccount(bool isLogin) {
     if (isLogin) {
+      // 关键修复:登录后不仅 refresh 收藏列表,
+      // 还要重新拉当前账号的 userInfo,刷新头像/昵称/统计等
+      queryUserInfo();
       onRefresh();
     } else {
       userInfo.value = UserInfoData();

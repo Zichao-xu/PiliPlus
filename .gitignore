@@ -5,9 +5,11 @@
 *.swp
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -147,3 +149,11 @@ pili_release.json
 dist
 
 test*
+scratch/
+# Sensitive — 绝不入库
+assets/config/default_account.json
+assets/config/*account*.json
+*.credentials.json
+*_cookies.json
+.env
+.env.local

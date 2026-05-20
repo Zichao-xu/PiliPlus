@@ -14,12 +14,14 @@ import 'package:PiliPlus/pages/login/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/pages/mine/controller.dart';
 import 'package:PiliPlus/pages/mine/widgets/item.dart';
+import 'package:PiliPlus/utils/yt_auth.dart';
 import 'package:PiliPlus/utils/bili_utils.dart';
 import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
+import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:get/get.dart';
@@ -62,6 +64,19 @@ class _MediaPageState extends CommonPageState<MinePage>
     return super.onNotificationType2(notification);
   }
 
+  bool get _hasAnyHeaderAction {
+    if (widget.showBackBtn) return true;
+    if (!_mainController.hasHome &&
+        (Pref.showMineSearch || Pref.showMineMsg)) {
+      return true;
+    }
+    if (GStorage.reply != null && Pref.showMineReply) return true;
+    return Pref.showMineIncognito ||
+        Pref.showMineSwitchAccount ||
+        Pref.showMineTheme ||
+        Pref.showMineSettings;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -69,10 +84,11 @@ class _MediaPageState extends CommonPageState<MinePage>
     final secondary = theme.colorScheme.secondary;
     return Column(
       children: [
-        Padding(
-          padding: const .symmetric(vertical: 10),
-          child: _buildHeaderActions,
-        ),
+        if (_hasAnyHeaderAction)
+          Padding(
+            padding: const .symmetric(vertical: 10),
+            child: _buildHeaderActions,
+          ),
         Expanded(
           child: Material(
             type: .transparency,
@@ -85,6 +101,7 @@ class _MediaPageState extends CommonPageState<MinePage>
                   children: [
                     _buildUserInfo(theme, secondary),
                     _buildActions(secondary),
+                    _buildYtAccount(theme, secondary),
                     Obx(
                       () => controller.loadingState.value is Loading
                           ? const SizedBox.shrink()
@@ -153,17 +170,18 @@ class _MediaPageState extends CommonPageState<MinePage>
             ),
           ),
         if (!_mainController.hasHome) ...[
-          IconButton(
-            iconSize: iconSize,
-            padding: padding,
-            style: style,
-            tooltip: '搜索',
-            onPressed: () => Get.toNamed('/search'),
-            icon: const Icon(Icons.search),
-          ),
-          msgBadge(_mainController),
+          if (Pref.showMineSearch)
+            IconButton(
+              iconSize: iconSize,
+              padding: padding,
+              style: style,
+              tooltip: '搜索',
+              onPressed: () => Get.toNamed('/search'),
+              icon: const Icon(Icons.search),
+            ),
+          if (Pref.showMineMsg) msgBadge(_mainController),
         ],
-        if (GStorage.reply != null)
+        if (GStorage.reply != null && Pref.showMineReply)
           IconButton(
             iconSize: iconSize,
             padding: padding,
@@ -172,49 +190,53 @@ class _MediaPageState extends CommonPageState<MinePage>
             onPressed: () => Get.toNamed('/myReply'),
             icon: const Icon(Icons.message_outlined),
           ),
-        Obx(
-          () {
-            final anonymity = MineController.anonymity.value;
-            return IconButton(
-              iconSize: iconSize,
-              padding: padding,
-              style: style,
-              tooltip: "${anonymity ? '退出' : '进入'}无痕模式",
-              onPressed: MineController.onChangeAnonymity,
-              icon: anonymity
-                  ? const Icon(MdiIcons.incognito)
-                  : const Icon(MdiIcons.incognitoOff),
-            );
-          },
-        ),
-        IconButton(
-          iconSize: iconSize,
-          padding: padding,
-          style: style,
-          tooltip: '设置账号模式',
-          onPressed: () => LoginPageController.switchAccountDialog(context),
-          icon: const Icon(Icons.switch_account_outlined),
-        ),
-        Obx(
-          () {
-            return IconButton(
-              iconSize: iconSize,
-              padding: padding,
-              style: style,
-              tooltip: '切换至${controller.nextThemeType.desc}主题',
-              onPressed: controller.onChangeTheme,
-              icon: controller.themeType.value.icon,
-            );
-          },
-        ),
-        IconButton(
-          iconSize: iconSize,
-          padding: padding,
-          style: style,
-          tooltip: '设置',
-          onPressed: () => Get.toNamed('/setting', preventDuplicates: false),
-          icon: const Icon(Icons.settings_outlined),
-        ),
+        if (Pref.showMineIncognito)
+          Obx(
+            () {
+              final anonymity = MineController.anonymity.value;
+              return IconButton(
+                iconSize: iconSize,
+                padding: padding,
+                style: style,
+                tooltip: "${anonymity ? '退出' : '进入'}无痕模式",
+                onPressed: MineController.onChangeAnonymity,
+                icon: anonymity
+                    ? const Icon(MdiIcons.incognito)
+                    : const Icon(MdiIcons.incognitoOff),
+              );
+            },
+          ),
+        if (Pref.showMineSwitchAccount)
+          IconButton(
+            iconSize: iconSize,
+            padding: padding,
+            style: style,
+            tooltip: '设置账号模式',
+            onPressed: () => LoginPageController.switchAccountDialog(context),
+            icon: const Icon(Icons.switch_account_outlined),
+          ),
+        if (Pref.showMineTheme)
+          Obx(
+            () {
+              return IconButton(
+                iconSize: iconSize,
+                padding: padding,
+                style: style,
+                tooltip: '切换至${controller.nextThemeType.desc}主题',
+                onPressed: controller.onChangeTheme,
+                icon: controller.themeType.value.icon,
+              );
+            },
+          ),
+        if (Pref.showMineSettings)
+          IconButton(
+            iconSize: iconSize,
+            padding: padding,
+            style: style,
+            tooltip: '设置',
+            onPressed: () => Get.toNamed('/setting', preventDuplicates: false),
+            icon: const Icon(Icons.settings_outlined),
+          ),
         const SizedBox(width: 16),
       ],
     );
@@ -446,6 +468,71 @@ class _MediaPageState extends CommonPageState<MinePage>
     const Duration(milliseconds: 150),
     () => controller.onRefresh(isManual: false),
   );
+
+  Widget _buildYtAccount(ThemeData theme, Color secondary) {
+    final loggedIn = YtAuthService.isLoggedIn;
+    final userName = YtAuthService.userName;
+    final avatar = YtAuthService.avatarUrl;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () async {
+            await Get.toNamed<bool>('/ytLogin');
+            if (mounted) setState(() {});
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // YT 红色 logo / 用户头像
+                if (loggedIn && avatar != null && avatar.isNotEmpty)
+                  CircleAvatar(radius: 18, backgroundImage: NetworkImage(avatar))
+                else
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF0000),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.play_arrow,
+                        color: Colors.white, size: 22),
+                  ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loggedIn
+                            ? 'YouTube${userName != null ? " · $userName" : " 已登录"}'
+                            : 'YouTube 未登录',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        loggedIn
+                            ? '点赞/收藏/评论已开启'
+                            : '点击登录(粘贴 cookie),解锁点赞/收藏/评论',
+                        style: TextStyle(
+                            fontSize: 11, color: secondary, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: secondary, size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildFav(ThemeData theme, Color secondary) {
     return Column(
