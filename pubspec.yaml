@@ -345,7 +345,6 @@ flutter:
     - path: assets/shaders/
     - path: assets/yt/
     - assets/config/default_settings.json
-    - assets/config/default_account.json
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
