@@ -1,0 +1,82 @@
+{
+  "ABIRoot": {
+    "kind": "Root",
+    "name": "TopLevel",
+    "printedName": "TopLevel",
+    "children": [
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "FSAChatBottomContainer",
+        "declAttributes": [
+          "RawDocComment"
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "FSAChatBottomContainer",
+        "printedName": "FSAChatBottomContainer",
+        "children": [
+          {
+            "kind": "Constructor",
+            "name": "init",
+            "printedName": "init(keyboardHeightBlock:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "FSAChatBottomContainer",
+                "printedName": "FSAChatBottomContainer.FSAChatBottomContainer",
+                "usr": "s:22FSAChatBottomContainerAAC"
+              },
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(CoreGraphics.CGFloat) -> ()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "CGFloat",
+                    "printedName": "CoreGraphics.CGFloat",
+                    "usr": "s:14CoreFoundation7CGFloatV"
+                  }
+                ]
+              }
+            ],
+            "declKind": "Constructor",
+            "usr": "s:22FSAChatBottomContainerAAC19keyboardHeightBlockABy14CoreFoundation7CGFloatVc_tcfc",
+            "mangledName": "$s22FSAChatBottomContainerAAC19keyboardHeightBlockABy12CoreGraphics7CGFloatVc_tcfc",
+            "moduleName": "FSAChatBottomContainer",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "init_kind": "Designated"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:22FSAChatBottomContainerAAC",
+        "mangledName": "$s22FSAChatBottomContainerAAC",
+        "moduleName": "FSAChatBottomContainer",
+        "declAttributes": [
+          "AccessControl"
+        ]
+      }
+    ],
+    "json_format_version": 8
+  },
+  "ConstValues": [
+    {
+      "filePath": "\/Users\/lxf\/Desktop\/gitHub\/flutter_chat_keyboard_source\/ios\/SDK\/FSAChatBottomContainer\/FSAChatBottomContainer\/FSAChatBottomContainer.swift",
+      "kind": "IntegerLiteral",
+      "offset": 1285,
+      "length": 1,
+      "value": "0"
+    }
+  ]
+}

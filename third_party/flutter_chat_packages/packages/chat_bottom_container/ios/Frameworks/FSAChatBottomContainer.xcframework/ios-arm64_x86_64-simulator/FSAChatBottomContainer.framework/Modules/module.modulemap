@@ -1,0 +1,4 @@
+framework module FSAChatBottomContainer {
+  header "FSAChatBottomContainer-Swift.h"
+  requires objc
+}
